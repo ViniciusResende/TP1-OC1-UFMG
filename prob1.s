@@ -20,6 +20,7 @@ inverte:
   lw x13, 4(sp) # load initial vector end adress from stack
   lw x1, 8(sp) # load function call return adress at stack
   addi sp, sp, 12 # deallocate stack to receive 3 word values
+  addi x10, x12, 0 # attributes the start vector adress to x10 register
   jalr x0, 0(x1) # return to call adress
 
 L1:  
@@ -29,11 +30,7 @@ L1:
   sw x29, 0(x12) # stores x29 value in the first position of the considered vector
   addi x12, x12, 4 # first element i from the considered vector passes to be i+1
   addi x13, x13, -4 # last element i from the considered vector passes to be i-1
-  bge x13, x12, RECURSIVE_CALL # in the case that the end adress of the considered vector is greater than the begin adress, the L1 block is recursively called
-  jalr x0, 0(x1) # return to call adress
-  
-RECURSIVE_CALL:
-  jal x1, L1 # calls L1 code block
+  bge x13, x12, L1 # in the case that the end adress of the considered vector is greater than the begin adress, the L1 block is recursively called
 
 ##### END MODIFIQUE AQUI END #####
 FIM: add x1, x0, x10 # returns "inverte" x10 result value
