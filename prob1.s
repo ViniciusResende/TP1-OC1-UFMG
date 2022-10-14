@@ -15,9 +15,7 @@ inverte:
   addi sp, sp, -4 # allocate stack to receive 1 word
   sw x1, 0(sp) # stores function call return address at stack
   bge x13, x12, elem_swap # in the case that the end address of the considered vector is greater than the considered begin address, the elem_swap block is called
-  lw x1, 0(sp) # load function call return address at stack
-  addi sp, sp, 4 # deallocate stack to receive 1 word
-  jalr x0, 0(x1) # return to inverte call address
+  beq x0, x0, exit_recursive # calls exit_recursive unconditionally to exit algorithm recursively
 
   elem_swap:  
     lw x28, 0(x12) # loads considered vector first value in x28
@@ -27,7 +25,12 @@ inverte:
     addi x12, x12, 4 # first element i from the considered vector passes to be i+1
     addi x13, x13, -4 # last element i from the considered vector passes to be i-1
     jal x1, inverte # calls inverte function recursively
+    beq x0, x0, exit_recursive # calls exit_recursive unconditionally to exit algorithm recursively
 
+  exit_recursive:
+    lw x1, 0(sp) # load function call return address at stack
+    addi sp, sp, 4 # deallocate stack to receive 1 word
+    jalr x0, 0(x1) # return to inverte call address
 
 ##### END MODIFIQUE AQUI END #####
 FIM: add x1, x0, x10 # returns "inverte" x10 result value
