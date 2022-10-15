@@ -6,7 +6,6 @@ magic_num: .word 6 5 4 3 2 9 8 7 6 5 4 3 2
 .text
 main:
 la x12, vetor # vector begin
-la x15, magic_num # magic_num begin
 addi x13, x0, 13 # vector size
 addi x14, x0, 1 # type of operation [0: CPF, 1: CNPJ]
 jal x1, verificadastro
@@ -62,14 +61,20 @@ verificacpf:
       addi x28, x28, 1 # iterator++
       blt x28, x29, mul_loop_cpf # in the case that the iterator is lower than the loop limit, mul_loop_cpf is called
 
-    addi x30, x0, 10 # x30 turns into const value 10
-    mul x5, x5, x30 # result aux variable is multiplied by 10
-    rem x5, x5, x13 # result aux = (result aux) % (11)
     lw x12, 4(sp) # loads original x12 value (begin of vector)
     add x12, x12, x16 # gets first or second validator digit according to function call
     lw x30, 0(x12) # loads validator digit to x30
-    bne x30, x5, not_valid_cpf # in the case of the validator digit differs from result aux goes to not_valid_cpf block
-    jalr x0, 0(x1) # return to call address
+
+    rem x5, x5, x13 # result aux = (result aux) % (11)
+    addi x31, x0, 2 # x31 turns into const value 2
+    bge x5, x31, else_lower_two_cpf # if result aux is lower than 2 goes to else_lower_two_cpf block
+    lower_two_cpf: 
+      bne x30, x0, not_valid_cpf # in the case fo the validator digit is not 0, CPF is invalid
+      jalr x0, 0(x1) # return to call address
+    else_lower_two_cpf:
+      sub x5, x13, x5 # result aux = 11 - result aux
+      bne x30, x5, not_valid_cpf # in the case fo the validator digit is not equal to result aux, CPF is invalid
+      jalr x0, 0(x1) # return to call address   
 
     not_valid_cpf:
       addi x10, x0, 0 # attribute x10 register to 0, indicating that CPF is not valid
@@ -165,6 +170,7 @@ verificadastro:
     jal x1, verificacpf # calls verificacpf
     bge x0, x0, exit_verifica # calls exit_verifica unconditionally to exit function
   call_cnpj:
+    la x15, magic_num # magic_num begin
     jal x1, verificacnpj # calls verificacnpj
     bge x0, x0, exit_verifica # calls exit_verifica unconditionally to exit function
 
