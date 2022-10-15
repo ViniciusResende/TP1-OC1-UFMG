@@ -1,12 +1,14 @@
 .data
-vetor: .word 0 9 9 3 4 2 0 6 6 4 1
+vetor: .word 0 0 2 0 8 4 0 8 0 0 0 1 5 3
 ##### START MODIFIQUE AQUI START #####
+magic_num: .word 6 5 4 3 2 9 8 7 6 5 4 3 2
 ##### END MODIFIQUE AQUI END #####
 .text
 main:
 la x12, vetor # vector begin
-addi x13, x0, 11 # vector size
-addi x14, x0, 0 # type of operation [0: CPF, 1: CNPJ]
+la x15, magic_num # magic_num begin
+addi x13, x0, 13 # vector size
+addi x14, x0, 1 # type of operation [0: CPF, 1: CNPJ]
 jal x1, verificadastro
 beq x0,x0,FIM
 ##### START MODIFIQUE AQUI START #####
@@ -19,19 +21,20 @@ verificacpf:
   addi x5, x0, 0 # result aux variable 
   addi x6, x0, 0 # multiplied aux variable
   addi x7, x0, 10 # multiplier aux variable
-  addi, x16, x0, 36 # sets x16 function parameter to 36 (tenth element idx)
-  jal x1, assure_digit # calls assure_digit function to assure that the tenth element (first validator digit) is valid
-  beq x10, x0, exit_cpf # in the case that x10 register has already been defined as 0 (not valid) algorithm can exit
-
-  addi x5, x0, 0 # result aux variable reset
-  addi x6, x0, 0 # multiplied aux variable reset
-  addi x7, x0, 11 # multiplier aux variable new value
-  addi, x16, x0, 40 # sets x16 function parameter to 40 (eleventh element idx)
-  jal x1, assure_digit # calls assure_digit function to assure that the eleventh element (second validator digit) is valid
+  addi x16, x0, 36 # sets x16 function parameter to 36 (tenth element idx)
+  jal x1, assure_digit_cpf # calls assure_digit function to assure that the tenth element (first validator digit) is valid
   beq x10, x0, exit_cpf # in the case that x10 register has already been defined as 0 (not valid) algorithm can exit
 
   lw x12, 4(sp) # loads original x12 value (vector begin address) from stack
-  addi, x28, x12, 40 # sets x28 register to the address of the last vector element
+  addi x5, x0, 0 # result aux variable reset
+  addi x6, x0, 0 # multiplied aux variable reset
+  addi x7, x0, 11 # multiplier aux variable new value
+  addi x16, x0, 40 # sets x16 function parameter to 40 (eleventh element idx)
+  jal x1, assure_digit_cpf # calls assure_digit function to assure that the eleventh element (second validator digit) is valid
+  beq x10, x0, exit_cpf # in the case that x10 register has already been defined as 0 (not valid) algorithm can exit
+
+  lw x12, 4(sp) # loads original x12 value (vector begin address) from stack
+  addi x28, x12, 40 # sets x28 register to the address of the last vector element
   verify_diff_digits:
     lw x29, 0(x12) # loads element of idx i from vector
     lw x30, 4(x12) # loads element of idx i + 1 from vector
@@ -47,17 +50,17 @@ verificacpf:
     addi x10, x0, 1 # if this block is called means that the CPF is valid and x10 receives 1
     beq x0, x0, exit_cpf # calls exit_cpf unconditionally to exit algorithm
 
-  assure_digit:
+  assure_digit_cpf:
     addi x28, x0, 0 # iterator variable
     addi x29, x7, -1 # loop limit = multiplier aux variable - 1
-    mul_loop: 
+    mul_loop_cpf: 
       lw x30, 0(x12) # loads vector element at x12
       mul x6, x30, x7 # multiplies element at x30 with the multiplier aux variable and stores in the multiplied aux variable
       add x5, x5, x6 # result aux variable = result aux variable + multiplied aux variable
       addi x7, x7, -1 # multiplier aux variable --
       addi x12, x12, 4 # x12 goes to next position on vector
       addi x28, x28, 1 # iterator++
-      blt x28, x29, mul_loop # in the case that the iterator is lower than the loop limit, mul_loop is called
+      blt x28, x29, mul_loop_cpf # in the case that the iterator is lower than the loop limit, mul_loop is called
 
     addi x30, x0, 10 # x30 turns into const value 10
     mul x5, x5, x30 # result aux variable is multiplied by 10
@@ -65,10 +68,10 @@ verificacpf:
     lw x12, 4(sp) # loads original x12 value (begin of vector)
     add x12, x12, x16 # gets first or second validator digit according to function call
     lw x30, 0(x12) # loads validator digit to x30
-    bne x30, x5, not_valid # in the case of the validator digit differs from result aux goes to not_Valid block
+    bne x30, x5, not_valid_cpf # in the case of the validator digit differs from result aux goes to not_Valid block
     jalr x0, 0(x1) # return to call address
 
-    not_valid:
+    not_valid_cpf:
       addi x10, x0, 0 # attribute x10 register to 0, indicating that CPF is not valid
       jalr x0, 0(x1) # return to call address
 
@@ -81,7 +84,6 @@ verificacpf:
 verificacnpj: 
   addi x10, x0, 9
   jalr x0, 0(x1)
-
 verificadastro: 
   addi sp, sp, -4 # allocate stack to receive 1 word value
   sw x1, 0(sp) # stores function call return address at stack
