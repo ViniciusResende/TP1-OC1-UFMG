@@ -22,7 +22,7 @@ verificacpf:
   addi x6, x0, 0 # multiplied aux variable
   addi x7, x0, 10 # multiplier aux variable
   addi x16, x0, 36 # sets x16 function parameter to 36 (tenth element idx)
-  jal x1, assure_digit_cpf # calls assure_digit function to assure that the tenth element (first validator digit) is valid
+  jal x1, assure_digit_cpf # calls assure_digit_cpf function to assure that the tenth element (first validator digit) is valid
   beq x10, x0, exit_cpf # in the case that x10 register has already been defined as 0 (not valid) algorithm can exit
 
   lw x12, 4(sp) # loads original x12 value (vector begin address) from stack
@@ -30,7 +30,7 @@ verificacpf:
   addi x6, x0, 0 # multiplied aux variable reset
   addi x7, x0, 11 # multiplier aux variable new value
   addi x16, x0, 40 # sets x16 function parameter to 40 (eleventh element idx)
-  jal x1, assure_digit_cpf # calls assure_digit function to assure that the eleventh element (second validator digit) is valid
+  jal x1, assure_digit_cpf # calls assure_digit_cpf function to assure that the eleventh element (second validator digit) is valid
   beq x10, x0, exit_cpf # in the case that x10 register has already been defined as 0 (not valid) algorithm can exit
 
   lw x12, 4(sp) # loads original x12 value (vector begin address) from stack
@@ -60,7 +60,7 @@ verificacpf:
       addi x7, x7, -1 # multiplier aux variable --
       addi x12, x12, 4 # x12 goes to next position on vector
       addi x28, x28, 1 # iterator++
-      blt x28, x29, mul_loop_cpf # in the case that the iterator is lower than the loop limit, mul_loop is called
+      blt x28, x29, mul_loop_cpf # in the case that the iterator is lower than the loop limit, mul_loop_cpf is called
 
     addi x30, x0, 10 # x30 turns into const value 10
     mul x5, x5, x30 # result aux variable is multiplied by 10
@@ -68,7 +68,7 @@ verificacpf:
     lw x12, 4(sp) # loads original x12 value (begin of vector)
     add x12, x12, x16 # gets first or second validator digit according to function call
     lw x30, 0(x12) # loads validator digit to x30
-    bne x30, x5, not_valid_cpf # in the case of the validator digit differs from result aux goes to not_Valid block
+    bne x30, x5, not_valid_cpf # in the case of the validator digit differs from result aux goes to not_valid_cpf block
     jalr x0, 0(x1) # return to call address
 
     not_valid_cpf:
@@ -91,64 +91,64 @@ verificacnpj:
   addi x5, x0, 0 # result aux variable 
   addi x6, x0, 0 # multiplied aux variable
   addi x7, x0, 1 # magic count aux variable
-  addi x16, x13, -1 # loop limit = multiplier aux variable - 1
-  jal x1, assure_digit_cnpj # calls assure_digit function to assure that the tenth element (first validator digit) is valid
+  addi x16, x13, -1 # loop limit = vector size - 1
+  jal x1, assure_digit_cnpj # calls assure_digit_cnpj function to assure that the twelfth element (first validator digit) is valid
   beq x10, x0, exit_cnpj # in the case that x10 register has already been defined as 0 (not valid) algorithm can exit
   
-  lw x12, 4(sp)
-  addi x5, x0, 0 # result aux variable 
-  addi x6, x0, 0 # multiplied aux variable
-  addi x7, x0, 0 # magic count aux variable
-  addi x16, x13, 0 # loop limit = multiplier aux variable - 1
-  jal x1, assure_digit_cnpj # calls assure_digit function to assure that the tenth element (first validator digit) is valid
+  lw x12, 4(sp) # loads x12 original value back from stack
+  addi x5, x0, 0 # result aux variable reset
+  addi x6, x0, 0 # multiplied aux variable reset
+  addi x7, x0, 0 # magic count aux variable new value
+  addi x16, x13, 0 # loop limit = vector size
+  jal x1, assure_digit_cnpj # calls assure_digit function to assure that the thirteenth element (second validator digit) is valid
   beq x10, x0, exit_cnpj # in the case that x10 register has already been defined as 0 (not valid) algorithm can exit
 
-  addi x10, x0, 1 # if this block is called means that the CPF is valid and x10 receives 1
-  beq x0, x0, exit_cnpj # calls exit_cpf unconditionally to exit algorithm
+  addi x10, x0, 1 # if this instruction is reached means that the CNPJ is valid and x10 receives 1
+  beq x0, x0, exit_cnpj # calls exit_cnpj unconditionally to exit algorithm
 
   assure_digit_cnpj:
     addi x28, x0, 0 # iterator variable
     mul_loop_cnpj: 
       lw x30, 0(x12) # loads vector element at x12
-      slli x29, x7, 2
-      add x29, x15, x29
-      lw x31, 0(x29)
-      mul x6, x30, x31 # multiplies element at x30 with the multiplier aux variable and stores in the multiplied aux variable
+      slli x29, x7, 2 # multiplies magic count aux by four so each number will have a word size
+      add x29, x15, x29 # gets the address of the element from magic_num at x7 position 
+      lw x31, 0(x29) # loads the element from magic_num at x7 position
+      mul x6, x30, x31 # multiplies element at x30 with the magic_num loaded
       add x5, x5, x6 # result aux variable = result aux variable + multiplied aux variable
-      addi x7, x7, 1 # multiplier aux variable --
+      addi x7, x7, 1 # magic count aux variable += 1
       addi x12, x12, 4 # x12 goes to next position on vector
       addi x28, x28, 1 # iterator++
       blt x28, x16, mul_loop_cnpj # in the case that the iterator is lower than the loop limit, mul_loop is called
 
     addi x30, x0, 11 # x30 turns into const value 11
     rem x5, x5, x30 # result aux = (result aux) % (11)
-    addi x31, x0, 2
-    bge x5, x31, else_lower_two
+    addi x31, x0, 2 # x31 turns into const value 2
+    bge x5, x31, else_lower_two # if result aux is lower than 2 goes to else_lower_two block
     lower_two: 
-      lw x12, 4(sp)
-      slli x16, x16, 2
-      add x12, x12, x16
+      lw x12, 4(sp) # loads x12 original value back from stack
+      slli x16, x16, 2 # multiplies digit being certified idx by 4 to transforms it in a vector address like
+      add x12, x12, x16 # position x12 in the digit being certified
       lw x31, 0(x12) # loads validator digit to x31
-      bne x31, x0, not_valid_cnpj
+      bne x31, x0, not_valid_cnpj # in the case fo the validator digit is not 0, CNPJ is invalid
       jalr x0, 0(x1) # return to call address
     else_lower_two:
-      lw x12, 4(sp)
-      sub x5, x30, x5
-      slli x16, x16, 2
-      add x12, x12, x16
+      lw x12, 4(sp) # loads x12 original value back from stack
+      sub x5, x30, x5 # result aux = 11 - result aux
+      slli x16, x16, 2 # multiplies digit being certified idx by 4 to transforms it in a vector address like
+      add x12, x12, x16 # position x12 in the digit being certified
       lw x31, 0(x12) # loads validator digit to x31
-      bne x31, x5, not_valid_cnpj
+      bne x31, x5, not_valid_cnpj # in the case fo the validator digit is not equal to result aux, CNPJ is invalid
       jalr x0, 0(x1) # return to call address    
 
     not_valid_cnpj:
-      addi x10, x0, 0 # attribute x10 register to 0, indicating that CPF is not valid
+      addi x10, x0, 0 # attribute x10 register to 0, indicating that CNPJ is not valid
       jalr x0, 0(x1) # return to call address
 
 
   exit_cnpj: 
     lw x1, 0(sp) # load initial function call return address at stack
-    lw x12, 4(sp) # loads x12 original value back to stack
-    lw x15, 8(sp)
+    lw x12, 4(sp) # loads x12 original value back from stack
+    lw x15, 8(sp) # loads x15 original value back from stack
     addi sp, sp, 12 # deallocate stack to receive 3 word values
     jalr x0, 0(x1) # return to verificacpf call address
 
