@@ -82,8 +82,76 @@ verificacpf:
     jalr x0, 0(x1) # return to verificacpf call address
 
 verificacnpj: 
-  addi x10, x0, 9
-  jalr x0, 0(x1)
+  addi x10, x0, -1 # attributes a initial undefined value at algorithm response
+  addi sp, sp, -12 # allocate stack to receive 3 words
+  sw x15, 8(sp) # stores magic_num start address at stack
+  sw x12, 4(sp) # stores vector start address at stack
+  sw x1, 0(sp) # stores function call return address at stack
+
+  addi x5, x0, 0 # result aux variable 
+  addi x6, x0, 0 # multiplied aux variable
+  addi x7, x0, 1 # magic count aux variable
+  addi x16, x13, -1 # loop limit = multiplier aux variable - 1
+  jal x1, assure_digit_cnpj # calls assure_digit function to assure that the tenth element (first validator digit) is valid
+  beq x10, x0, exit_cnpj # in the case that x10 register has already been defined as 0 (not valid) algorithm can exit
+  
+  lw x12, 4(sp)
+  addi x5, x0, 0 # result aux variable 
+  addi x6, x0, 0 # multiplied aux variable
+  addi x7, x0, 0 # magic count aux variable
+  addi x16, x13, 0 # loop limit = multiplier aux variable - 1
+  jal x1, assure_digit_cnpj # calls assure_digit function to assure that the tenth element (first validator digit) is valid
+  beq x10, x0, exit_cnpj # in the case that x10 register has already been defined as 0 (not valid) algorithm can exit
+
+  addi x10, x0, 1 # if this block is called means that the CPF is valid and x10 receives 1
+  beq x0, x0, exit_cnpj # calls exit_cpf unconditionally to exit algorithm
+
+  assure_digit_cnpj:
+    addi x28, x0, 0 # iterator variable
+    mul_loop_cnpj: 
+      lw x30, 0(x12) # loads vector element at x12
+      slli x29, x7, 2
+      add x29, x15, x29
+      lw x31, 0(x29)
+      mul x6, x30, x31 # multiplies element at x30 with the multiplier aux variable and stores in the multiplied aux variable
+      add x5, x5, x6 # result aux variable = result aux variable + multiplied aux variable
+      addi x7, x7, 1 # multiplier aux variable --
+      addi x12, x12, 4 # x12 goes to next position on vector
+      addi x28, x28, 1 # iterator++
+      blt x28, x16, mul_loop_cnpj # in the case that the iterator is lower than the loop limit, mul_loop is called
+
+    addi x30, x0, 11 # x30 turns into const value 11
+    rem x5, x5, x30 # result aux = (result aux) % (11)
+    addi x31, x0, 2
+    bge x5, x31, else_lower_two
+    lower_two: 
+      lw x12, 4(sp)
+      slli x16, x16, 2
+      add x12, x12, x16
+      lw x31, 0(x12) # loads validator digit to x31
+      bne x31, x0, not_valid_cnpj
+      jalr x0, 0(x1) # return to call address
+    else_lower_two:
+      lw x12, 4(sp)
+      sub x5, x30, x5
+      slli x16, x16, 2
+      add x12, x12, x16
+      lw x31, 0(x12) # loads validator digit to x31
+      bne x31, x5, not_valid_cnpj
+      jalr x0, 0(x1) # return to call address    
+
+    not_valid_cnpj:
+      addi x10, x0, 0 # attribute x10 register to 0, indicating that CPF is not valid
+      jalr x0, 0(x1) # return to call address
+
+
+  exit_cnpj: 
+    lw x1, 0(sp) # load initial function call return address at stack
+    lw x12, 4(sp) # loads x12 original value back to stack
+    lw x15, 8(sp)
+    addi sp, sp, 12 # deallocate stack to receive 3 word values
+    jalr x0, 0(x1) # return to verificacpf call address
+
 verificadastro: 
   addi sp, sp, -4 # allocate stack to receive 1 word value
   sw x1, 0(sp) # stores function call return address at stack
